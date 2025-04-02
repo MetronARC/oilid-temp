@@ -145,39 +145,34 @@
           return false;
         }
         
-        updateNFCStatus('Requesting NFC permission...');
+        updateNFCStatus('Initializing NFC...');
         
         try {
-          // First check if we have NFC permission
-          const permissionStatus = await navigator.permissions.query({ name: "nfc" });
-          
-          if (permissionStatus.state === "denied") {
-            showAlert(
-              'Permission Denied',
-              'NFC access was denied. Please enable NFC permissions in your browser settings and reload the page.',
-              'error'
-            );
-            updateNFCStatus('NFC permission denied. Please enable in browser settings.', true);
-            return false;
-          }
-
           const ndef = new NDEFReader();
+          console.log("Requesting NFC permissions...");
           
           try {
             await ndef.scan();
+            console.log("> NFC scan started");
             updateNFCStatus('NFC scanning active. Ready to read card.');
 
             ndef.addEventListener("readingerror", () => {
+              console.log("Cannot read data from the NFC tag.");
               updateNFCStatus('Error: Cannot read data from the NFC tag. Try another one?', true);
             });
 
-            ndef.addEventListener("reading", ({ serialNumber }) => {
+            ndef.addEventListener("reading", ({ message, serialNumber }) => {
+              console.log(`> Serial Number: ${serialNumber}`);
+              if (message && message.records) {
+                console.log(`> Records: (${message.records.length})`);
+              }
               updateNFCStatus(`Card detected: ${serialNumber}`);
               verifyInspector(serialNumber);
             });
             
             return true;
           } catch (scanError) {
+            console.error("Scan error:", scanError);
             if (scanError.name === "NotAllowedError") {
               showAlert(
                 'Permission Required',
@@ -196,6 +191,7 @@
             return false;
           }
         } catch (error) {
+          console.error("NFC initialization error:", error);
           updateNFCStatus(`Error: ${error.message || error}`, true);
           return false;
         }
