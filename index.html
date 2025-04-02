@@ -145,22 +145,56 @@
           return false;
         }
         
-        updateNFCStatus('Initializing NFC scanning...');
+        updateNFCStatus('Requesting NFC permission...');
         
         try {
+          // First check if we have NFC permission
+          const permissionStatus = await navigator.permissions.query({ name: "nfc" });
+          
+          if (permissionStatus.state === "denied") {
+            showAlert(
+              'Permission Denied',
+              'NFC access was denied. Please enable NFC permissions in your browser settings and reload the page.',
+              'error'
+            );
+            updateNFCStatus('NFC permission denied. Please enable in browser settings.', true);
+            return false;
+          }
+
           const ndef = new NDEFReader();
-          await ndef.scan();
-          updateNFCStatus('NFC scanning active. Ready to read card.');
+          
+          try {
+            await ndef.scan();
+            updateNFCStatus('NFC scanning active. Ready to read card.');
 
-          ndef.addEventListener("readingerror", () => {
-            updateNFCStatus('Error: Cannot read data from the NFC tag. Try another one?', true);
-          });
+            ndef.addEventListener("readingerror", () => {
+              updateNFCStatus('Error: Cannot read data from the NFC tag. Try another one?', true);
+            });
 
-          ndef.addEventListener("reading", ({ serialNumber }) => {
-            updateNFCStatus(`Card detected: ${serialNumber}`);
-            verifyInspector(serialNumber);
-          });
-          return true;
+            ndef.addEventListener("reading", ({ serialNumber }) => {
+              updateNFCStatus(`Card detected: ${serialNumber}`);
+              verifyInspector(serialNumber);
+            });
+            
+            return true;
+          } catch (scanError) {
+            if (scanError.name === "NotAllowedError") {
+              showAlert(
+                'Permission Required',
+                'Please allow NFC access when prompted and try again.',
+                'info'
+              );
+              updateNFCStatus('Waiting for NFC permission...', true);
+            } else {
+              showAlert(
+                'Error',
+                'Failed to start NFC scanning. Please ensure NFC is enabled on your device.',
+                'error'
+              );
+              updateNFCStatus('Failed to start NFC scanning', true);
+            }
+            return false;
+          }
         } catch (error) {
           updateNFCStatus(`Error: ${error.message || error}`, true);
           return false;
