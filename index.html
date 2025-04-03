@@ -44,8 +44,10 @@
                         <h4 class="mb-4 pb-3">Inspector Login</h4>
                         <div id="nfc-container" class="form-group">
                           <div class="nfc-message">
-                            <i class="uil uil-nfc" style="font-size: 48px;"></i>
-                            <p class="mt-3">Please tap your Inspector RFID card to login</p>
+                            <i class="uil uil-nfc" style="font-size: 48px"></i>
+                            <p class="mt-3">
+                              Please tap your Inspector RFID card to login
+                            </p>
                             <div id="nfc-status" class="mt-2"></div>
                           </div>
                         </div>
@@ -102,120 +104,85 @@
     </div>
 
     <script>
-      // Dummy RFID data for testing
-      const VALID_INSPECTOR_RFID = "04:23:45:67:89:AB";
+      // Dummy RFID value for testing
+      const VALID_RFID = "04:23:45:67:89:AB";
 
-      // Function to show SweetAlert messages
-      function showAlert(title, text, icon) {
+      // Function to show success message
+      function showSuccessAlert(message) {
         Swal.fire({
-          title: title,
-          text: text,
-          icon: icon,
-          confirmButtonText: 'OK'
+          icon: 'success',
+          title: 'Success',
+          text: message
         });
       }
 
-      // Function to update NFC status on the page
-      function updateNFCStatus(message, isError = false) {
-        const statusElement = document.getElementById('nfc-status');
-        statusElement.textContent = message;
-        statusElement.style.color = isError ? 'red' : 'green';
+      // Function to show error message
+      function showErrorAlert(message) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: message
+        });
       }
 
-      // Function to handle inspector verification
-      function verifyInspector(serialNumber) {
-        if (serialNumber === VALID_INSPECTOR_RFID) {
-          showAlert('Success', 'Hello Inspector!', 'success');
-          return true;
+      // Function to log messages on the page
+      function log(message) {
+        console.log(message);
+      }
+
+      // Function to validate RFID and show appropriate message
+      function validateRFID(serialNumber) {
+        if (serialNumber === VALID_RFID) {
+          showSuccessAlert("Hello Inspector!");
         } else {
-          showAlert('Error', 'Cannot identify inspector, login as guest or try again.', 'error');
-          return false;
+          showErrorAlert("Data unknown, try another card");
         }
       }
 
-      // Function to initialize NFC scanning
-      async function initializeNFC() {
-        if (!("NDEFReader" in window)) {
-          showAlert(
-            'Warning', 
-            'Web NFC is not available. Please use Chrome on Android.', 
-            'warning'
-          );
-          updateNFCStatus('NFC not supported on this device', true);
-          return false;
-        }
-        
-        updateNFCStatus('Initializing NFC...');
-        
+      // Function to send serialNumber via AJAX
+      async function sendSerialNumber(serialNumber) {
         try {
-          const ndef = new NDEFReader();
-          console.log("Requesting NFC permissions...");
-          
-          try {
-            await ndef.scan();
-            console.log("> NFC scan started");
-            updateNFCStatus('NFC scanning active. Ready to read card.');
+          const response = await fetch("<?= base_url('nfc-read/receive') ?>", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ serialNumber: serialNumber }),
+          });
 
-            ndef.addEventListener("readingerror", () => {
-              console.log("Cannot read data from the NFC tag.");
-              updateNFCStatus('Error: Cannot read data from the NFC tag. Try another one?', true);
-            });
-
-            ndef.addEventListener("reading", ({ message, serialNumber }) => {
-              console.log(`> Serial Number: ${serialNumber}`);
-              if (message && message.records) {
-                console.log(`> Records: (${message.records.length})`);
-              }
-              updateNFCStatus(`Card detected: ${serialNumber}`);
-              verifyInspector(serialNumber);
-            });
-            
-            return true;
-          } catch (scanError) {
-            console.error("Scan error:", scanError);
-            if (scanError.name === "NotAllowedError") {
-              showAlert(
-                'Permission Required',
-                'Please allow NFC access when prompted and try again.',
-                'info'
-              );
-              updateNFCStatus('Waiting for NFC permission...', true);
-            } else {
-              showAlert(
-                'Error',
-                'Failed to start NFC scanning. Please ensure NFC is enabled on your device.',
-                'error'
-              );
-              updateNFCStatus('Failed to start NFC scanning', true);
-            }
-            return false;
-          }
+          const result = await response.json();
+          log(`Server response: ${result.message}`);
         } catch (error) {
-          console.error("NFC initialization error:", error);
-          updateNFCStatus(`Error: ${error.message || error}`, true);
-          return false;
+          showErrorAlert(`Error sending data: ${error.message}`);
         }
       }
 
       // Start NFC scanning when the page loads
       window.onload = async function () {
-        const checkbox = document.getElementById('reg-log');
-        const hasNFCSupport = await initializeNFC();
-        
-        // Handle checkbox changes for inspector/guest toggle
-        checkbox.addEventListener('change', async function() {
-          if (!checkbox.checked) { // Inspector login side
-            if (!hasNFCSupport) {
-              showAlert(
-                'Warning', 
-                'Web NFC is not available. Please use Chrome on Android or login as guest.', 
-                'warning'
-              );
-            } else {
-              updateNFCStatus('NFC scanning active. Ready to read card.');
-            }
-          }
-        });
+        if (!("NDEFReader" in window)) {
+          showErrorAlert("Web NFC is not available. Use Chrome on Android.");
+          return;
+        }
+
+        log("Initializing NFC scanning...");
+
+        try {
+          const ndef = new NDEFReader();
+          await ndef.scan();
+          log("> Scan started");
+
+          ndef.addEventListener("readingerror", () => {
+            showErrorAlert("Cannot read data from the NFC tag. Try another one?");
+          });
+
+          ndef.addEventListener("reading", ({ serialNumber }) => {
+            log(`> Serial Number: ${serialNumber}`);
+            validateRFID(serialNumber);
+            sendSerialNumber(serialNumber);
+          });
+        } catch (error) {
+          showErrorAlert(`Error: ${error.message || error}`);
+        }
       };
     </script>
   </body>
