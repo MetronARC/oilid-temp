@@ -44,10 +44,10 @@
                         <h4 class="mb-4 pb-3">Inspector Login</h4>
                         <div id="nfc-container" class="form-group">
                           <div class="nfc-message">
-                            <i class="uil uil-nfc" style="font-size: 48px"></i>
-                            <p class="mt-3">
-                              Please tap your Inspector RFID card to login
-                            </p>
+                            <button id="nfc-button" class="nfc-scan-button">
+                              <i class="uil uil-nfc"></i>
+                            </button>
+                            <p class="mt-3">Click the button to scan your Inspector RFID card</p>
                             <div id="nfc-status" class="mt-2"></div>
                           </div>
                         </div>
@@ -103,9 +103,54 @@
       </div>
     </div>
 
+    <style>
+      .nfc-scan-button {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(to right, #ffeba7 0%, #f5ce62 100%);
+        border: none;
+        cursor: pointer;
+        transition: all 0.4s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+      }
+
+      .nfc-scan-button:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 24px 0 rgba(16,39,112,.2);
+      }
+
+      .nfc-scan-button i {
+        font-size: 48px;
+        color: #102770;
+      }
+
+      .scanning .nfc-scan-button {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(245, 206, 98, 0.7);
+        }
+        70% {
+          transform: scale(1.05);
+          box-shadow: 0 0 0 20px rgba(245, 206, 98, 0);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(245, 206, 98, 0);
+        }
+      }
+    </style>
     <script>
       // Dummy RFID value for testing
-      const VALID_RFID = "04:23:45:67:89:AB";
+      const VALID_RFID = "d3:ff:a8:19";
+      let isScanning = false;
 
       // Function to show success message
       function showSuccessAlert(message) {
@@ -128,6 +173,8 @@
       // Function to log messages on the page
       function log(message) {
         console.log(message);
+        const statusElement = document.getElementById('nfc-status');
+        statusElement.textContent = message;
       }
 
       // Function to validate RFID and show appropriate message
@@ -139,51 +186,47 @@
         }
       }
 
-      // Function to send serialNumber via AJAX
-      async function sendSerialNumber(serialNumber) {
-        try {
-          const response = await fetch("<?= base_url('nfc-read/receive') ?>", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ serialNumber: serialNumber }),
-          });
-
-          const result = await response.json();
-          log(`Server response: ${result.message}`);
-        } catch (error) {
-          showErrorAlert(`Error sending data: ${error.message}`);
-        }
-      }
-
-      // Start NFC scanning when the page loads
-      window.onload = async function () {
+      // Function to start NFC scanning
+      async function startNFCScanning() {
+        if (isScanning) return;
+        
         if (!("NDEFReader" in window)) {
           showErrorAlert("Web NFC is not available. Use Chrome on Android.");
           return;
         }
 
-        log("Initializing NFC scanning...");
-
         try {
+          const nfcButton = document.getElementById('nfc-container');
+          nfcButton.classList.add('scanning');
+          isScanning = true;
+          
+          log("Initializing NFC scanning...");
           const ndef = new NDEFReader();
           await ndef.scan();
-          log("> Scan started");
+          log("Scanning... Please tap your card");
 
           ndef.addEventListener("readingerror", () => {
             showErrorAlert("Cannot read data from the NFC tag. Try another one?");
           });
 
           ndef.addEventListener("reading", ({ serialNumber }) => {
-            log(`> Serial Number: ${serialNumber}`);
+            log(`Card detected: ${serialNumber}`);
             validateRFID(serialNumber);
-            sendSerialNumber(serialNumber);
+            nfcButton.classList.remove('scanning');
+            isScanning = false;
           });
         } catch (error) {
+          nfcButton.classList.remove('scanning');
+          isScanning = false;
           showErrorAlert(`Error: ${error.message || error}`);
         }
-      };
+      }
+
+      // Add click event listener to the NFC button
+      document.addEventListener('DOMContentLoaded', function() {
+        const nfcButton = document.getElementById('nfc-button');
+        nfcButton.addEventListener('click', startNFCScanning);
+      });
     </script>
   </body>
 </html>
