@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OILid Login Form</title>
+    <title>OILid Login</title>
     <link
         rel="stylesheet"
         href="https://unicons.iconscout.com/release/v2.1.9/css/unicons.css" />
@@ -12,13 +12,14 @@
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" />
     <link rel="stylesheet" href="<?= base_url('/css/login-style.css') ?>" />
+    <link href="<?= base_url('img/favicon.png') ?>" rel="icon" />
     <!-- Add SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
-    <a href="https://front.codes/" class="logo" target="_blank">
-        <img src="https://assets.codepen.io/1462889/fcy.png" alt="" />
+    <a href="/" class="logo" target="_blank">
+        <img src="<?= base_url('img/oilid.png') ?>" alt="" style="width: 75px; height: 50px;" />
     </a>
 
     <div class="section">
