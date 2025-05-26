@@ -23,4 +23,9 @@ class Pages extends BaseController
     {
         return view('pages/query');
     }
+
+    public function test(): string
+    {
+        return view('pages/test');
+    }
 }

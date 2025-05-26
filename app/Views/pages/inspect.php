@@ -243,6 +243,18 @@
         color: #8e8e96;
         margin-top: 5px;
     }
+
+    /* Add styles for test mode section */
+    .test-mode-section {
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 20px;
+        margin-top: 20px;
+    }
+
+    .test-mode-section h5 {
+        color: #ffeba7;
+        font-weight: 500;
+    }
 </style>
 
 <script>

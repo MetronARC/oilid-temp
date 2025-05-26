@@ -258,6 +258,27 @@
         background-color: #dc3545;
         color: white;
     }
+
+    /* Add styles for test mode section */
+    .test-mode-section {
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 20px;
+        margin-top: 20px;
+    }
+
+    .test-mode-section h5 {
+        color: #ffeba7;
+        font-weight: 500;
+    }
+
+    #test-query-btn {
+        background: linear-gradient(to right, #ffeba7 0%, #f5ce62 100%);
+        color: #102770;
+    }
+
+    #test-query-btn:hover {
+        background: linear-gradient(to right, #f5ce62 0%, #ffeba7 100%);
+    }
 </style>
 
 <script>
@@ -341,7 +362,7 @@
                     const historyContent = document.getElementById('historyContent');
                     if (data.history.length > 0) {
                         const historyHtml = data.history.map(record => {
-                            const date = new Date(record.inspection_date);
+                            const date = new Date(record.inspection_timestamp);
                             const formattedDate = date.toLocaleString('en-US', {
                                 day: 'numeric',
                                 month: 'long',

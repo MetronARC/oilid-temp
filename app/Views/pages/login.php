@@ -26,7 +26,7 @@
                                 <div class="center-wrap">
                                     <div class="section text-center">
                                         <h4 class="mb-4 pb-3">Inspector Login</h4>
-                                        <div id="nfc-container" class="form-group">
+                                        <div id="nfc-container" class="form-group mb-4">
                                             <div class="nfc-message">
                                                 <button id="nfc-button" class="nfc-scan-button">
                                                     <i class="uil uil-nfc"></i>
@@ -148,8 +148,25 @@
         margin-top: 10px;
         color: #ffeba7;
     }
+
+    /* Add styles for test mode section */
+    .test-mode-section {
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 20px;
+    }
+
+    .test-mode-section h5 {
+        color: #ffeba7;
+        font-weight: 500;
+    }
 </style>
 <script>
+    // Check if we were redirected due to session expiry
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('session') === 'expired') {
+        showErrorAlert('Your session has expired. Please log in again.');
+    }
+
     let isScanning = false;
 
     // Function to show loading state
@@ -196,31 +213,40 @@
     }
 
     // Function to validate RFID with the server
-    async function validateRFID(serialNumber) {
+    async function processLogin(uid) {
         try {
             showLoading();
-            const response = await fetch('<?= base_url('users/inspector_login') ?>', {
+            log(`Initiating login process for UID: ${uid}`);
+
+            const response = await fetch('<?= base_url('inspector/nfc_login') ?>', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: `rfid=${encodeURIComponent(serialNumber)}`
+                body: `uid=${encodeURIComponent(uid)}`
             });
 
             const data = await response.json();
+            hideLoading();
 
             if (data.success) {
                 showSuccessAlert(data.message);
                 // Redirect after showing the success message
                 setTimeout(() => {
-                    window.location.href = data.redirect;
+                    window.location.href = '<?= base_url('dashboard') ?>';
                 }, 1500);
             } else {
-                showErrorAlert(data.message);
+                if (data.redirect) {
+                    // Session expired or unauthorized access
+                    window.location.href = data.redirect;
+                } else {
+                    showErrorAlert(data.message);
+                }
             }
         } catch (error) {
-            showErrorAlert('An error occurred while verifying your card. Please try again.');
+            hideLoading();
+            showErrorAlert('An error occurred during login. Please try again.');
             console.error('Error:', error);
         }
     }
@@ -245,6 +271,7 @@
             log("Scanning... Please tap your card");
 
             ndef.addEventListener("readingerror", () => {
+                hideLoading();
                 showErrorAlert("Cannot read data from the NFC tag. Try another one?");
             });
 
@@ -252,7 +279,7 @@
                 serialNumber
             }) => {
                 log(`Card detected: ${serialNumber}`);
-                validateRFID(serialNumber);
+                processLogin(serialNumber);
                 nfcButton.classList.remove('scanning');
                 isScanning = false;
             });
@@ -268,6 +295,20 @@
         const nfcButton = document.getElementById('nfc-button');
         nfcButton.addEventListener('click', startNFCScanning);
     });
+
+    async function logout() {
+        try {
+            // For a regular HTTP request, use a form submission
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?= base_url('logout') ?>';
+            document.body.appendChild(form);
+            form.submit();
+        } catch (error) {
+            console.error('Error during logout:', error);
+            showErrorAlert('An error occurred during logout');
+        }
+    }
 </script>
 
 <?= $this->endSection() ?>
